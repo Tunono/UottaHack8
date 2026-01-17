@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LLM Comparison</title>
+  <title>LLM Comparison Tool</title>
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
   <link rel="stylesheet" href="style.css">
@@ -12,15 +12,38 @@
 </head>
 <body>
   <div class="container">
-    <h1 class="text-center my-4">Compare LLM Responses</h1>
-    <form id="promptForm" class="mb-4">
-      <div class="form-group">
-        <textarea id="prompt" class="form-control" rows="4" placeholder="Enter your prompt here..." required></textarea>
-      </div>
-      <button type="submit" class="btn btn-primary btn-block">Compare</button>
-    </form>
+    <div class="header-section">
+      <h1>AI Model Comparison Tool</h1>
+      <p class="subtitle">Compare responses from different Large Language Models with detailed analytics</p>
+    </div>
+
+    <div class="form-section">
+      <form id="promptForm">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="model1">First AI Model:</label>
+            <select id="model1" class="form-control" required>
+              <option value="">Select AI Model</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="model2">Second AI Model:</label>
+            <select id="model2" class="form-control" required>
+              <option value="">Select AI Model</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="prompt">Your Prompt:</label>
+          <textarea id="prompt" class="form-control" rows="4" placeholder="Enter your prompt to compare AI responses..." required></textarea>
+        </div>
+        <button type="submit" class="btn">Compare AI Responses</button>
+      </form>
+    </div>
+
     <div id="results"></div>
   </div>
+
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
   <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
