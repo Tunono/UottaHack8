@@ -31,7 +31,8 @@ async function getAvailableModels() {
     models.push(
       { provider: 'gemini', id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash' },
       { provider: 'gemini', id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro' },
-      { provider: 'gemini', id: 'gemini-2.0-flash-exp', name: 'Gemini 2.0 Flash' }
+      { provider: 'gemini', id: 'gemini-2.0-flash-exp', name: 'Gemini 2.0 Flash' },
+      { provider: 'gemini', id: 'gemini-2.5-flash', name: 'Gemni 2.5 Flash'}
     );
   }
   return models;
@@ -42,21 +43,37 @@ async function callLLM(provider, modelId, prompt) {
   let output, tokens = null;
 
   if (provider === 'openai') {
-    const response = await openai.chat.completions.create({
-      model: modelId,
-      messages: [{ role: 'user', content: prompt }],
-    });
-    output = response.choices[0].message.content;
-    tokens = response.usage.total_tokens;
+    return callGPT(prompt,modelId);
   } else if (provider === 'gemini') {
-    const model = genAI.getGenerativeModel({ model: modelId });
-    const result = await model.generateContent(prompt);
-    output = result.response.text();
-  }
+    return callGemini(prompt,modelId);
 
+  }
+}
+
+async function callGPT(prompt,modelId) {
+  const start = Date.now();
+  const response = await openai.chat.completions.create({
+    model: modelId,
+    messages: [{ role: 'user', content: prompt }],
+  });
   const time = Date.now() - start;
+  const output = response.choices[0].message.content;
+  const tokens = response.usage.total_tokens;
   return { output, time, tokens };
 }
+
+async function callGemini(prompt,modelId) {
+  const start = Date.now();
+  const response = await genAI.models.generateContent({
+    model: modelId,
+    contents: prompt,
+  });
+  const time = Date.now() - start;
+  const output = response.text;
+  const tokens = null; // Gemini API doesn't provide token count in response
+  return { output, time, tokens };
+}
+
 
 app.get('/models', async (req, res) => {
   try {
