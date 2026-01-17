@@ -12,6 +12,28 @@ app.use(express.static(path.join(__dirname, 'public')));
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
+// Function to calculate text metrics
+function calculateTextMetrics(text) {
+  if (!text) return { charCount: 0, wordCount: 0, sentenceCount: 0, lexicalDiversity: 0, avgWordLength: 0 };
+
+  const charCount = text.length;
+  const words = text.toLowerCase().match(/\b\w+\b/g) || [];
+  const wordCount = words.length;
+  const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+  const sentenceCount = sentences.length;
+  const uniqueWords = new Set(words);
+  const lexicalDiversity = wordCount > 0 ? (uniqueWords.size / wordCount) : 0;
+  const avgWordLength = wordCount > 0 ? words.reduce((sum, word) => sum + word.length, 0) / wordCount : 0;
+
+  return {
+    charCount,
+    wordCount,
+    sentenceCount,
+    lexicalDiversity: lexicalDiversity * 100, // as percentage
+    avgWordLength: Math.round(avgWordLength * 100) / 100
+  };
+}
+
 async function getAvailableModels() {
   const models = [];
   if (process.env.OPENAI_API_KEY) {
@@ -95,9 +117,13 @@ app.post('/compare', async (req, res) => {
     // Calculate similarity
     const similarity = stringSimilarity.compareTwoStrings(result1.output, result2.output);
 
+    // Calculate text metrics for both responses
+    const metrics1 = calculateTextMetrics(result1.output);
+    const metrics2 = calculateTextMetrics(result2.output);
+
     res.json({ 
-      model1: { ...result1, name: model1.name }, 
-      model2: { ...result2, name: model2.name }, 
+      model1: { ...result1, name: model1.name, metrics: metrics1 }, 
+      model2: { ...result2, name: model2.name, metrics: metrics2 }, 
       similarity 
     });
 } catch (error) {
