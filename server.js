@@ -60,7 +60,7 @@ async function getAvailableModels() {
   return models;
 }
 
-async function callLLM(provider, modelId, prompt) {
+async function callGemini(prompt) {
   const start = Date.now();
   let output, tokens = null;
 
@@ -107,15 +107,15 @@ app.get('/models', async (req, res) => {
 });
 
 app.post('/compare', async (req, res) => {
-  const { prompt, model1, model2 } = req.body;
+  const { prompt } = req.body;
   try {
-    const [result1, result2] = await Promise.all([
-      callLLM(model1.provider, model1.id, prompt),
-      callLLM(model2.provider, model2.id, prompt)
+    const [gpt, gemini] = await Promise.all([
+      callGPT(prompt),
+      callGemini(prompt)
     ]);
 
     // Calculate similarity
-    const similarity = stringSimilarity.compareTwoStrings(result1.output, result2.output);
+    const similarity = stringSimilarity.compareTwoStrings(gpt.output, gemini.output);
 
     // Calculate text metrics for both responses
     const metrics1 = calculateTextMetrics(result1.output);

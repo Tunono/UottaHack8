@@ -44,7 +44,7 @@ document.getElementById('promptForm').addEventListener('submit', async (e) => {
     const response = await fetch('/compare', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt, model1, model2 })
+      body: JSON.stringify({ prompt })
     });
     const data = await response.json();
 
