@@ -12,42 +12,77 @@ app.use(express.static(path.join(__dirname, 'public')));
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-async function callGPT(prompt) {
+async function getAvailableModels() {
+  const models = [];
+  if (process.env.OPENAI_API_KEY) {
+    try {
+      const openaiModels = await openai.models.list();
+      openaiModels.data.forEach(model => {
+        if (model.id.includes('gpt')) {
+          models.push({ provider: 'openai', id: model.id, name: model.id });
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching OpenAI models:', error);
+    }
+  }
+  if (process.env.GEMINI_API_KEY) {
+    // Gemini models - hardcoded common ones
+    models.push(
+      { provider: 'gemini', id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash' },
+      { provider: 'gemini', id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro' },
+      { provider: 'gemini', id: 'gemini-2.0-flash-exp', name: 'Gemini 2.0 Flash' }
+    );
+  }
+  return models;
+}
+
+async function callLLM(provider, modelId, prompt) {
   const start = Date.now();
-  const response = await openai.chat.completions.create({
-    model: 'gpt-3.5-turbo',
-    messages: [{ role: 'user', content: prompt }],
-  });
+  let output, tokens = null;
+
+  if (provider === 'openai') {
+    const response = await openai.chat.completions.create({
+      model: modelId,
+      messages: [{ role: 'user', content: prompt }],
+    });
+    output = response.choices[0].message.content;
+    tokens = response.usage.total_tokens;
+  } else if (provider === 'gemini') {
+    const model = genAI.getGenerativeModel({ model: modelId });
+    const result = await model.generateContent(prompt);
+    output = result.response.text();
+  }
+
   const time = Date.now() - start;
-  const output = response.choices[0].message.content;
-  const tokens = response.usage.total_tokens;
   return { output, time, tokens };
 }
 
-async function callGemini(prompt) {
-  const start = Date.now();
-  const response = await genAI.models.generateContent({
-    model: 'gemini-2.5-flash',
-    contents: prompt,
-  });
-  const time = Date.now() - start;
-  const output = response.text;
-  const tokens = null; // Gemini API doesn't provide token count in response
-  return { output, time, tokens };
-}
+app.get('/models', async (req, res) => {
+  try {
+    const models = await getAvailableModels();
+    res.json({ models });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 app.post('/compare', async (req, res) => {
-  const { prompt } = req.body;
+  const { prompt, model1, model2 } = req.body;
   try {
-    const [gpt, gemini] = await Promise.all([
-      callGPT(prompt),
-      callGemini(prompt)
+    const [result1, result2] = await Promise.all([
+      callLLM(model1.provider, model1.id, prompt),
+      callLLM(model2.provider, model2.id, prompt)
     ]);
 
     // Calculate similarity
-    const similarity = stringSimilarity.compareTwoStrings(gpt.output, gemini.output);
+    const similarity = stringSimilarity.compareTwoStrings(result1.output, result2.output);
 
-    res.json({ gpt, gemini, similarity });
+    res.json({ 
+      model1: { ...result1, name: model1.name }, 
+      model2: { ...result2, name: model2.name }, 
+      similarity 
+    });
 } catch (error) {
     console.error(error);
     res.status(500).json({ error: error.message });
