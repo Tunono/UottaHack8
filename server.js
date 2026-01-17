@@ -46,6 +46,11 @@ async function getAvailableModels() {
       });
     } catch (error) {
       console.error('Error fetching OpenAI models:', error);
+      // Add default OpenAI models if fetch fails
+      models.push(
+        { provider: 'openai', id: 'gpt-4', name: 'GPT-4' },
+        { provider: 'openai', id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo' }
+      );
     }
   }
   if (process.env.GEMINI_API_KEY) {
@@ -54,21 +59,22 @@ async function getAvailableModels() {
       { provider: 'gemini', id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash' },
       { provider: 'gemini', id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro' },
       { provider: 'gemini', id: 'gemini-2.0-flash-exp', name: 'Gemini 2.0 Flash' },
-      { provider: 'gemini', id: 'gemini-2.5-flash', name: 'Gemni 2.5 Flash'}
+      { provider: 'gemini', id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash'}
     );
+  }
+  if (models.length === 0) {
+    throw new Error('No API keys configured. Please set OPENAI_API_KEY and/or GEMINI_API_KEY in your .env file.');
   }
   return models;
 }
 
-async function callGemini(prompt) {
-  const start = Date.now();
-  let output, tokens = null;
+async function callModel(prompt, modelId) {
+  const provider = modelId.includes('gpt') ? 'openai' : 'gemini';
 
   if (provider === 'openai') {
-    return callGPT(prompt,modelId);
+    return callGPT(prompt, modelId);
   } else if (provider === 'gemini') {
-    return callGemini(prompt,modelId);
-
+    return callGeminiModel(prompt, modelId);
   }
 }
 
@@ -84,7 +90,7 @@ async function callGPT(prompt,modelId) {
   return { output, time, tokens };
 }
 
-async function callGemini(prompt,modelId) {
+async function callGeminiModel(prompt, modelId) {
   const start = Date.now();
   const response = await genAI.models.generateContent({
     model: modelId,
@@ -107,15 +113,19 @@ app.get('/models', async (req, res) => {
 });
 
 app.post('/compare', async (req, res) => {
-  const { prompt } = req.body;
+  const { prompt, model1, model2 } = req.body;
   try {
-    const [gpt, gemini] = await Promise.all([
-      callGPT(prompt),
-      callGemini(prompt)
+    if (!prompt || !model1 || !model2) {
+      return res.status(400).json({ error: 'Missing prompt or model selection' });
+    }
+
+    const [result1, result2] = await Promise.all([
+      callModel(prompt, model1.id),
+      callModel(prompt, model2.id)
     ]);
 
     // Calculate similarity
-    const similarity = stringSimilarity.compareTwoStrings(gpt.output, gemini.output);
+    const similarity = stringSimilarity.compareTwoStrings(result1.output, result2.output);
 
     // Calculate text metrics for both responses
     const metrics1 = calculateTextMetrics(result1.output);
@@ -126,7 +136,7 @@ app.post('/compare', async (req, res) => {
       model2: { ...result2, name: model2.name, metrics: metrics2 }, 
       similarity 
     });
-} catch (error) {
+  } catch (error) {
     console.error(error);
     res.status(500).json({ error: error.message });
   }
