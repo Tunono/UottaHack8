@@ -56,16 +56,21 @@ async function getAvailableModels() {
   if (process.env.GEMINI_API_KEY) {
     // Gemini models - hardcoded common ones
     models.push(
-      { provider: 'gemini', id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash' },
-      { provider: 'gemini', id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro' },
-      { provider: 'gemini', id: 'gemini-2.0-flash-exp', name: 'Gemini 2.0 Flash' },
-      { provider: 'gemini', id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash'}
+   { provider: 'gemini', id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash'}
     );
   }
   if (models.length === 0) {
     throw new Error('No API keys configured. Please set OPENAI_API_KEY and/or GEMINI_API_KEY in your .env file.');
   }
-  return models;
+  // Filter out models that contain keywords that may signifiy a non-LLM model
+  const filteredModels = models.filter(model => 
+    !model.id.toLowerCase().includes('audio') && 
+    !model.id.toLowerCase().includes('transcribe')&& 
+    !model.id.toLowerCase().includes('tts')&&
+    !model.id.toLowerCase().includes('instruct')&& 
+    !model.id.toLowerCase().includes('image')
+  );
+  return filteredModels;
 }
 
 async function callModel(prompt, modelId) {

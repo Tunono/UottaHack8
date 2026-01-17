@@ -3,10 +3,131 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Compare TS - LLM Comparison Tool</title>
+  <title>compare ts. - LLM Comparison Tool</title>
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
   <link rel="stylesheet" href="style.css">
+  <style>
+    body, html {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .top-header {
+      position: relative;
+      z-index: 10;
+    }
+
+    #nn-bg-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 0;
+      pointer-events: none;
+      background: linear-gradient(135deg, #0f1419 0%, #1a1f2e 100%);
+    }
+
+    .home-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+
+    .home-content {
+      text-align: center;
+      pointer-events: auto;
+    }
+
+    .home-title {
+      font-size: 7vw;
+      font-weight: 900;
+      letter-spacing: -3px;
+      margin: 0;
+      text-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 2px 8px rgba(160, 132, 238, 0.3);
+      background: linear-gradient(135deg, #a084ee 0%, #667eea 50%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: pulse-glow 3s ease-in-out infinite;
+    }
+
+    .home-title .highlight {
+      color: #00f2fe;
+      background: none;
+      -webkit-text-fill-color: #00f2fe;
+    }
+
+    .home-subtitle {
+      font-size: 1.5rem;
+      color: rgba(255, 255, 255, 0.7);
+      margin-top: 1.5rem;
+      margin-bottom: 3rem;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+      font-weight: 300;
+      letter-spacing: 0.5px;
+    }
+
+    .home-cta {
+      display: inline-block;
+      padding: 1rem 3rem;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      text-decoration: none;
+      border-radius: 50px;
+      font-weight: 600;
+      font-size: 1.1rem;
+      transition: all 0.3s ease;
+      box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .home-cta:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 32px rgba(102, 126, 234, 0.6);
+      text-decoration: none;
+      color: white;
+    }
+
+    .home-cta:active {
+      transform: translateY(-1px);
+    }
+
+    @keyframes pulse-glow {
+      0%, 100% {
+        filter: drop-shadow(0 0 20px rgba(160, 132, 238, 0.3));
+      }
+      50% {
+        filter: drop-shadow(0 0 40px rgba(160, 132, 238, 0.6));
+      }
+    }
+
+    @media (max-width: 768px) {
+      .home-title {
+        font-size: 4rem;
+      }
+
+      .home-subtitle {
+        font-size: 1rem;
+      }
+
+      .home-cta {
+        padding: 0.75rem 2rem;
+        font-size: 0.95rem;
+      }
+    }
+  </style>
 </head>
 <body>
   <!-- Top Header Bar -->
@@ -15,7 +136,7 @@
       <a href="home.html" class="logo-link">
         <div class="logo-section">
           <i class="fas fa-brain"></i>
-          <span class="app-title">AI Model Comparison</span>
+          <span class="app-title">Model Matchup</span>
         </div>
       </a>
       <nav class="header-nav">
@@ -27,6 +148,10 @@
     </div>
   </header>
 
+  <!-- Animated Neural Network Background -->
+  <canvas id="nn-bg-canvas"></canvas>
+
+  <!-- Home Content -->
   <div class="home-container">
     <div class="home-content">
       <h1 class="home-title">compare <span class="highlight">ts.</span></h1>
@@ -38,5 +163,137 @@
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
   <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
   <script src="settings.js"></script>
+
+  <script>
+    // Neural Network Animated Background
+    const canvas = document.getElementById('nn-bg-canvas');
+    const ctx = canvas.getContext('2d');
+    let width = window.innerWidth;
+    let height = window.innerHeight;
+
+    function resize() {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = width;
+      canvas.height = height;
+    }
+
+    window.addEventListener('resize', resize);
+    resize();
+
+    // Neural network parameters
+    const layers = 6;
+    const nodesPerLayer = [5, 8, 12, 10, 8, 5];
+    const nodeRadius = 8;
+    const layerSpacing = width / (layers + 1);
+    let nodePositions = [];
+
+    function computeNodePositions() {
+      nodePositions = [];
+      for (let l = 0; l < layers; l++) {
+        const nodes = nodesPerLayer[l];
+        const x = layerSpacing * (l + 1);
+        const spacing = height / (nodes + 1);
+        for (let n = 0; n < nodes; n++) {
+          const y = spacing * (n + 1);
+          nodePositions.push({ x, y, l, n });
+        }
+      }
+    }
+
+    computeNodePositions();
+
+    // Build edges with animation properties
+    let edges = [];
+
+    function buildEdges() {
+      edges = [];
+      for (let l = 0; l < layers - 1; l++) {
+        const fromNodes = nodesPerLayer[l];
+        const toNodes = nodesPerLayer[l + 1];
+        for (let i = 0; i < fromNodes; i++) {
+          for (let j = 0; j < toNodes; j++) {
+            edges.push({
+              from: { l, n: i },
+              to: { l: l + 1, n: j },
+              phase: Math.random() * Math.PI * 2,
+              pulse: Math.random() * 0.5 + 0.5
+            });
+          }
+        }
+      }
+    }
+
+    buildEdges();
+
+    // Animation loop
+    function animate() {
+      ctx.fillStyle = 'rgba(15, 20, 25, 0.15)';
+      ctx.fillRect(0, 0, width, height);
+
+      const time = Date.now() / 1000;
+
+      // Draw edges with pulse animation
+      for (const edge of edges) {
+        const fromIdx = nodePositions.findIndex(
+          p => p.l === edge.from.l && p.n === edge.from.n
+        );
+        const toIdx = nodePositions.findIndex(
+          p => p.l === edge.to.l && p.n === edge.to.n
+        );
+
+        if (fromIdx === -1 || toIdx === -1) continue;
+
+        const from = nodePositions[fromIdx];
+        const to = nodePositions[toIdx];
+
+        // Animate edge color and opacity
+        const t = time * edge.pulse + edge.phase;
+        const hue = (120 + 80 * Math.sin(t)) % 360;
+        const saturation = 80 + 20 * Math.cos(t * 2);
+        const alpha = 0.1 + 0.15 * Math.sin(t * 1.5);
+
+        ctx.strokeStyle = `hsla(${hue}, ${saturation}%, 60%, ${alpha})`;
+        ctx.lineWidth = 1.5 + 0.5 * Math.sin(t);
+        ctx.beginPath();
+        ctx.moveTo(from.x, from.y);
+        ctx.lineTo(to.x, to.y);
+        ctx.stroke();
+      }
+
+      // Draw nodes with glow
+      for (const node of nodePositions) {
+        const glow = 6 + 4 * Math.sin(time + node.l * 0.3 + node.n * 0.2);
+        const nodeAlpha = 0.7 + 0.3 * Math.sin(time * 0.5 + node.l);
+
+        // Node glow
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, nodeRadius + glow, 0, 2 * Math.PI);
+        ctx.fillStyle = `rgba(160, 132, 238, ${nodeAlpha * 0.2})`;
+        ctx.fill();
+
+        // Node core
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, nodeRadius, 0, 2 * Math.PI);
+        ctx.fillStyle = `rgba(255, 255, 255, ${nodeAlpha})`;
+        ctx.fill();
+
+        // Node border
+        ctx.strokeStyle = `rgba(160, 132, 238, ${nodeAlpha * 0.8})`;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+
+      requestAnimationFrame(animate);
+    }
+
+    animate();
+
+    // Recompute positions on resize
+    window.addEventListener('resize', () => {
+      computeNodePositions();
+      buildEdges();
+    });
+  </script>
 </body>
 </html>
