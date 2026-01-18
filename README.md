@@ -1,6 +1,6 @@
 # LLM Comparison Website
 
-This website allows you to compare responses from two different LLMs: OpenAI GPT and Google Gemini.
+This website allows you to compare responses from two different LLMs such as: OpenAI GPT and Google Gemini.
 
 ## Setup
 
