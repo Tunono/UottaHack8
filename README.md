@@ -31,11 +31,15 @@ This website allows you to compare responses from two different LLMs such as: Op
 Main 
 
 
+
 -Most Stable version of software
 
 -Reflects lastest version
 
+
+
 clean-main
+
 
 
 -Most feature packed verion of software
