@@ -12,9 +12,6 @@ app.use(express.static(path.join(__dirname, 'public')));
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-// Custom API keys (array)
-let customApiKeys = [];
-
 // Function to calculate text metrics
 function calculateTextMetrics(text) {
   if (!text) return { charCount: 0, wordCount: 0, sentenceCount: 0, lexicalDiversity: 0, avgWordLength: 0 };
@@ -37,7 +34,7 @@ function calculateTextMetrics(text) {
   };
 }
 
-async function getAvailableModels(customKeys = []) {
+async function getAvailableModels() {
   const models = [];
   if (process.env.OPENAI_API_KEY) {
     try {
@@ -62,30 +59,6 @@ async function getAvailableModels(customKeys = []) {
    { provider: 'gemini', id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash'}
     );
   }
-
-  // Add custom models
-  customApiKeys = customKeys; // Store globally for use in callModel
-  for (const customKey of customKeys) {
-    const { provider, key } = customKey;
-    if (provider === 'openai' && key) {
-      try {
-        const customOpenai = new OpenAI({ apiKey: key });
-        const customModels = await customOpenai.models.list();
-        customModels.data.forEach(model => {
-          if (model.id.includes('gpt') && !model.id.toLowerCase().includes('audio') && !model.id.toLowerCase().includes('transcribe')) {
-            models.push({ provider: 'openai-custom', id: model.id, name: model.id });
-          }
-        });
-      } catch (error) {
-        console.error('Error fetching custom OpenAI models:', error);
-      }
-    }
-    if (provider === 'gemini' && key) {
-      // For Gemini, add a custom model using a valid model id
-      models.push({ provider: 'gemini-custom', id: 'gemini-1.5-flash', name: 'Gemini Custom' });
-    }
-  }
-
   if (models.length === 0) {
     throw new Error('No API keys configured. Please set OPENAI_API_KEY and/or GEMINI_API_KEY in your .env file.');
   }
@@ -95,30 +68,24 @@ async function getAvailableModels(customKeys = []) {
     !model.id.toLowerCase().includes('transcribe')&& 
     !model.id.toLowerCase().includes('tts')&&
     !model.id.toLowerCase().includes('instruct')&& 
-    !model.id.toLowerCase().includes('image')&& 
-    !model.id.toLowerCase().includes('codex')
+    !model.id.toLowerCase().includes('image')
   );
   return filteredModels;
 }
 
 async function callModel(prompt, modelId) {
-  const provider = modelId.includes('gpt') ? 'openai' : modelId.includes('gemini') ? 'gemini' : 'unknown';
+  const provider = modelId.includes('gpt') ? 'openai' : 'gemini';
 
   if (provider === 'openai') {
-    const customKey = customApiKeys.find(k => k.provider === 'openai');
-    const apiKey = customKey ? customKey.key : process.env.OPENAI_API_KEY;
-    return callGPT(prompt, modelId, apiKey);
+    return callGPT(prompt, modelId);
   } else if (provider === 'gemini') {
-    const customKey = customApiKeys.find(k => k.provider === 'gemini');
-    const apiKey = customKey ? customKey.key : process.env.GEMINI_API_KEY;
-    return callGeminiModel(prompt, modelId, apiKey);
+    return callGeminiModel(prompt, modelId);
   }
 }
 
-async function callGPT(prompt,modelId, apiKey = process.env.OPENAI_API_KEY) {
+async function callGPT(prompt,modelId) {
   const start = Date.now();
-  const client = new OpenAI({ apiKey });
-  const response = await client.chat.completions.create({
+  const response = await openai.chat.completions.create({
     model: modelId,
     messages: [{ role: 'user', content: prompt }],
   });
@@ -128,10 +95,9 @@ async function callGPT(prompt,modelId, apiKey = process.env.OPENAI_API_KEY) {
   return { output, time, tokens };
 }
 
-async function callGeminiModel(prompt, modelId, apiKey = process.env.GEMINI_API_KEY) {
+async function callGeminiModel(prompt, modelId) {
   const start = Date.now();
-  const client = new GoogleGenAI({ apiKey });
-  const response = await client.models.generateContent({
+  const response = await genAI.models.generateContent({
     model: modelId,
     contents: prompt,
   });
@@ -144,16 +110,7 @@ async function callGeminiModel(prompt, modelId, apiKey = process.env.GEMINI_API_
 
 app.get('/models', async (req, res) => {
   try {
-    const customKeys = [];
-    let index = 0;
-    while (req.query[`customProvider${index}`] && req.query[`customApiKey${index}`]) {
-      customKeys.push({
-        provider: req.query[`customProvider${index}`],
-        key: req.query[`customApiKey${index}`]
-      });
-      index++;
-    }
-    const models = await getAvailableModels(customKeys);
+    const models = await getAvailableModels();
     res.json({ models });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -163,10 +120,18 @@ app.get('/models', async (req, res) => {
 app.post('/compare', async (req, res) => {
   const { prompt, model1, model2 } = req.body;
   try {
-    if (!prompt || !model1 || !model2) {
-      return res.status(400).json({ error: 'Missing prompt or model selection' });
+    if (!model1 || !model2) {
+      return res.status(400).json({ error: 'Missing model selection' });
     }
 
+    // If no prompt provided, return metadata-only comparison (pricing, context limits, recommendations)
+    if (!prompt || prompt.trim().length === 0) {
+      const info1 = getModelInfo(model1.id);
+      const info2 = getModelInfo(model2.id);
+      return res.json({ metadataOnly: true, model1: { name: model1.name, info: info1 }, model2: { name: model2.name, info: info2 } });
+    }
+
+    // Otherwise, call both models with the provided prompt
     const [result1, result2] = await Promise.all([
       callModel(prompt, model1.id),
       callModel(prompt, model2.id)
@@ -186,6 +151,50 @@ app.post('/compare', async (req, res) => {
     });
   } catch (error) {
     console.error(error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Simple model metadata/pricing helper
+function getModelInfo(modelId) {
+  const id = (modelId || '').toLowerCase();
+  if (id.includes('gpt-4')) {
+    return {
+      price: '$0.03 / 1k tokens (input), $0.06 / 1k tokens (output)',
+      context: '8k-32k tokens (varies by variant)',
+      recommended: 'Complex reasoning, summarization',
+      notes: 'Higher cost, better for accuracy'
+    };
+  }
+  if (id.includes('gpt-3.5') || id.includes('turbo')) {
+    return {
+      price: '$0.002 / 1k tokens',
+      context: '4k-16k tokens (varies)',
+      recommended: 'Cheap chat, prototyping',
+      notes: 'Low cost, fast responses'
+    };
+  }
+  if (id.includes('gemini')) {
+    return {
+      price: 'See Google Gemini pricing',
+      context: 'Large context',
+      recommended: 'Multimodal, high-quality responses',
+      notes: 'Consult Google docs for exact pricing'
+    };
+  }
+  return { price: 'Varies', context: 'Unknown', recommended: 'General use', notes: '' };
+}
+
+// Chat endpoint: single-model conversational call
+app.post('/chat', async (req, res) => {
+  const { prompt, model } = req.body;
+  try {
+    if (!prompt || !model) return res.status(400).json({ error: 'Missing prompt or model' });
+
+    const result = await callModel(prompt, model.id);
+    res.json({ output: result.output, time: result.time, tokens: result.tokens, modelName: model.name });
+  } catch (error) {
+    console.error('Chat error:', error);
     res.status(500).json({ error: error.message });
   }
 });
