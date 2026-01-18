@@ -26,13 +26,17 @@ This website allows you to compare responses from two different LLMs such as: Op
 - View response times and token counts (where available)
 - See similarity score between the responses~
 
-## branches
+## Branches
 
 Main 
+
+
 -Most Stable version of software
 -Reflects lastest version
 
 clean-main
+
+
 -Most feature packed verion of software
 -Focued on creating and testing features
 
