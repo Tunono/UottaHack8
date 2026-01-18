@@ -12,9 +12,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-// Custom API keys (in memory)
-let customOpenaiApiKey = null;
-let customGeminiApiKey = null;
+// Custom API keys (array)
+let customApiKeys = [];
 
 // Function to calculate text metrics
 function calculateTextMetrics(text) {
@@ -38,7 +37,7 @@ function calculateTextMetrics(text) {
   };
 }
 
-async function getAvailableModels(customProvider, customApiKey) {
+async function getAvailableModels(customKeys = []) {
   const models = [];
   if (process.env.OPENAI_API_KEY) {
     try {
@@ -65,24 +64,26 @@ async function getAvailableModels(customProvider, customApiKey) {
   }
 
   // Add custom models
-  if (customProvider === 'openai' && customApiKey) {
-    try {
-      const customOpenai = new OpenAI({ apiKey: customApiKey });
-      const customModels = await customOpenai.models.list();
-      customModels.data.forEach(model => {
-        if (model.id.includes('gpt')) {
-          models.push({ provider: 'openai-custom', id: model.id, name: model.id });
-        }
-      });
-      customOpenaiApiKey = customApiKey;
-    } catch (error) {
-      console.error('Error fetching custom OpenAI models:', error);
+  customApiKeys = customKeys; // Store globally for use in callModel
+  for (const customKey of customKeys) {
+    const { provider, key } = customKey;
+    if (provider === 'openai' && key) {
+      try {
+        const customOpenai = new OpenAI({ apiKey: key });
+        const customModels = await customOpenai.models.list();
+        customModels.data.forEach(model => {
+          if (model.id.includes('gpt') && !model.id.toLowerCase().includes('audio') && !model.id.toLowerCase().includes('transcribe')) {
+            models.push({ provider: 'openai-custom', id: model.id, name: model.id });
+          }
+        });
+      } catch (error) {
+        console.error('Error fetching custom OpenAI models:', error);
+      }
     }
-  }
-  if (customProvider === 'gemini' && customApiKey) {
-    // For Gemini, add a custom model using a valid model id
-    models.push({ provider: 'gemini-custom', id: 'gemini-1.5-flash', name: 'Gemini Custom' });
-    customGeminiApiKey = customApiKey;
+    if (provider === 'gemini' && key) {
+      // For Gemini, add a custom model using a valid model id
+      models.push({ provider: 'gemini-custom', id: 'gemini-1.5-flash', name: 'Gemini Custom' });
+    }
   }
 
   if (models.length === 0) {
@@ -94,7 +95,8 @@ async function getAvailableModels(customProvider, customApiKey) {
     !model.id.toLowerCase().includes('transcribe')&& 
     !model.id.toLowerCase().includes('tts')&&
     !model.id.toLowerCase().includes('instruct')&& 
-    !model.id.toLowerCase().includes('image')
+    !model.id.toLowerCase().includes('image')&& 
+    !model.id.toLowerCase().includes('codex')
   );
   return filteredModels;
 }
@@ -103,10 +105,12 @@ async function callModel(prompt, modelId) {
   const provider = modelId.includes('gpt') ? 'openai' : modelId.includes('gemini') ? 'gemini' : 'unknown';
 
   if (provider === 'openai') {
-    const apiKey = modelId.includes('custom') ? customOpenaiApiKey : process.env.OPENAI_API_KEY;
+    const customKey = customApiKeys.find(k => k.provider === 'openai');
+    const apiKey = customKey ? customKey.key : process.env.OPENAI_API_KEY;
     return callGPT(prompt, modelId, apiKey);
   } else if (provider === 'gemini') {
-    const apiKey = modelId.includes('custom') ? customGeminiApiKey : process.env.GEMINI_API_KEY;
+    const customKey = customApiKeys.find(k => k.provider === 'gemini');
+    const apiKey = customKey ? customKey.key : process.env.GEMINI_API_KEY;
     return callGeminiModel(prompt, modelId, apiKey);
   }
 }
@@ -140,9 +144,16 @@ async function callGeminiModel(prompt, modelId, apiKey = process.env.GEMINI_API_
 
 app.get('/models', async (req, res) => {
   try {
-    const customProvider = req.query.customProvider;
-    const customApiKey = req.query.customApiKey;
-    const models = await getAvailableModels(customProvider, customApiKey);
+    const customKeys = [];
+    let index = 0;
+    while (req.query[`customProvider${index}`] && req.query[`customApiKey${index}`]) {
+      customKeys.push({
+        provider: req.query[`customProvider${index}`],
+        key: req.query[`customApiKey${index}`]
+      });
+      index++;
+    }
+    const models = await getAvailableModels(customKeys);
     res.json({ models });
   } catch (error) {
     res.status(500).json({ error: error.message });

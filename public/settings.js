@@ -31,14 +31,9 @@ function setupEventListeners() {
   }
 
   // Custom API Key
-  const saveApiKeyButton = document.getElementById('saveApiKey');
-  if (saveApiKeyButton) {
-    saveApiKeyButton.addEventListener('click', saveCustomApiKey);
-  }
-
-  const clearApiKeyButton = document.getElementById('clearApiKey');
-  if (clearApiKeyButton) {
-    clearApiKeyButton.addEventListener('click', clearCustomApiKey);
+  const addApiKeyButton = document.getElementById('addApiKey');
+  if (addApiKeyButton) {
+    addApiKeyButton.addEventListener('click', addCustomApiKey);
   }
 }
 
@@ -65,17 +60,9 @@ function loadSettings() {
     themeRadio.checked = true;
   }
 
-  // Load custom API key
-  const customProvider = localStorage.getItem('customProvider') || '';
-  const customApiKey = localStorage.getItem('customApiKey') || '';
-  const customProviderSelect = document.getElementById('customProvider');
-  const customApiKeyInput = document.getElementById('customApiKey');
-  if (customProviderSelect) {
-    customProviderSelect.value = customProvider;
-  }
-  if (customApiKeyInput) {
-    customApiKeyInput.value = customApiKey;
-  }
+  // Load custom API keys
+  const customKeys = JSON.parse(localStorage.getItem('customApiKeys') || '[]');
+  renderSavedKeys(customKeys);
 }
 
 function applySettings() {
@@ -145,42 +132,137 @@ function resetAllSettings() {
     localStorage.removeItem('darkMode');
     localStorage.removeItem('fontSize');
     localStorage.removeItem('theme');
-    localStorage.removeItem('customProvider');
-    localStorage.removeItem('customApiKey');
+    localStorage.removeItem('customApiKeys');
 
     // Reset UI
     loadSettings();
     applySettings();
+    renderSavedKeys([]); // Clear the keys list
 
     // Reload page to show changes
     location.reload();
   }
 }
 
-function saveCustomApiKey() {
+function addCustomApiKey() {
   const provider = document.getElementById('customProvider').value;
   const apiKey = document.getElementById('customApiKey').value.trim();
   
   if (!provider) {
-    alert('Please select a provider.');
+    showNotification('Please select a provider.', 'danger');
     return;
   }
   if (!apiKey) {
-    alert('Please enter an API key.');
+    showNotification('Please enter an API key.', 'danger');
     return;
   }
   
-  localStorage.setItem('customProvider', provider);
-  localStorage.setItem('customApiKey', apiKey);
-  alert('Custom API key saved successfully!');
-}
-
-function clearCustomApiKey() {
-  localStorage.removeItem('customProvider');
-  localStorage.removeItem('customApiKey');
+  // Basic validation for API key format
+  if (!isValidApiKey(provider, apiKey)) {
+    showNotification('Invalid API key format for the selected provider.', 'danger');
+    return;
+  }
+  
+  const customKeys = JSON.parse(localStorage.getItem('customApiKeys') || '[]');
+  
+  // Check if key already exists
+  const existingKey = customKeys.find(k => k.key === apiKey);
+  if (existingKey) {
+    showNotification('This API key is already saved.', 'warning');
+    return;
+  }
+  
+  // Add new key
+  customKeys.push({ provider, key: apiKey });
+  localStorage.setItem('customApiKeys', JSON.stringify(customKeys));
+  
+  // Clear form
   document.getElementById('customProvider').value = '';
   document.getElementById('customApiKey').value = '';
-  alert('Custom API key cleared.');
+  
+  // Re-render list
+  renderSavedKeys(customKeys);
+  showNotification('<i class="fas fa-check-circle"></i> API key added successfully!', 'success');
+}
+
+function isValidApiKey(provider, apiKey) {
+  switch (provider) {
+    case 'openai':
+      // OpenAI keys typically start with 'sk-' and are longer than 20 characters
+      return apiKey.startsWith('sk-') && apiKey.length > 20;
+    case 'gemini':
+      // Gemini API keys are typically 39 characters long
+      return apiKey.length === 39;
+    case 'anthropic':
+      // Anthropic keys typically start with 'sk-ant-'
+      return apiKey.startsWith('sk-ant-') && apiKey.length > 20;
+    case 'custom':
+      // For custom, just check it's not empty and has reasonable length
+      return apiKey.length > 10;
+    default:
+      return true; // Allow if provider is unknown
+  }
+}
+
+function renderSavedKeys(keys) {
+  const listContainer = document.getElementById('savedKeysList');
+  listContainer.innerHTML = '';
+  
+  if (keys.length === 0) {
+    listContainer.innerHTML = '<p class="text-muted">No custom API keys saved yet.</p>';
+    return;
+  }
+  
+  keys.forEach((keyObj, index) => {
+    const keyItem = document.createElement('div');
+    keyItem.className = 'saved-key-item mb-2 p-2 border rounded';
+    keyItem.innerHTML = `
+      <div class="mb-1 text-center">
+        <strong style="font-size: 0.9rem;">${keyObj.provider.charAt(0).toUpperCase() + keyObj.provider.slice(1)} API Key</strong>
+      </div>
+      <div class="text-center">
+        <button class="btn btn-link text-muted" style="font-size: 0.75rem; padding: 0.1rem 0.3rem;" onclick="removeApiKey(${index})">
+          <i class="fas fa-trash"></i> Remove
+        </button>
+      </div>
+    `;
+    listContainer.appendChild(keyItem);
+  });
+}
+
+function removeApiKey(index) {
+  const customKeys = JSON.parse(localStorage.getItem('customApiKeys') || '[]');
+  customKeys.splice(index, 1);
+  localStorage.setItem('customApiKeys', JSON.stringify(customKeys));
+  renderSavedKeys(customKeys);
+  showNotification('API key removed.', 'info');
+}
+
+// Make removeApiKey available globally
+window.removeApiKey = removeApiKey;
+
+function showNotification(message, type = 'success') {
+  const banner = document.getElementById('notificationBanner');
+  const messageSpan = document.getElementById('notificationMessage');
+  
+  if (banner && messageSpan) {
+    // Remove existing classes
+    banner.classList.remove('alert-success', 'alert-danger', 'alert-info', 'alert-warning');
+    // Add new type class
+    banner.classList.add('alert-' + type);
+    
+    messageSpan.innerHTML = message;
+    banner.style.display = 'block';
+    banner.classList.add('show');
+    
+    // Auto-hide after 5 seconds
+    setTimeout(() => {
+      banner.classList.remove('show');
+      setTimeout(() => {
+        banner.style.display = 'none';
+      }, 150); // Wait for fade out
+    }, 5000);
+  }
 }
 
 // Apply settings on every page load

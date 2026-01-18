@@ -27,6 +27,14 @@
     </div>
   </header>
 
+  <!-- Notification Banner -->
+  <div id="notificationBanner" class="alert alert-success alert-dismissible fade" style="display: none; position: fixed; top: 60px; left: 50%; transform: translateX(-50%); z-index: 1050; min-width: 300px;" role="alert">
+    <span id="notificationMessage"></span>
+    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+      <span aria-hidden="true">&times;</span>
+    </button>
+  </div>
+
   <div class="container">
     <div class="header-section">
       <h1>Settings</h1>
@@ -92,21 +100,23 @@
 
           <div class="setting-item">
             <div class="setting-header">
-              <h3><i class="fas fa-key"></i> Custom API Key</h3>
-              <p class="setting-description">Add an API key for additional ML models to compare</p>
+              <h3><i class="fas fa-key"></i> Custom API Keys</h3>
+              <p class="setting-description">Add multiple API keys for additional ML models to compare</p>
             </div>
             <div class="setting-control">
-              <select id="customProvider" class="form-control mb-2">
-                <option value="">Select Provider</option>
-                <option value="openai">OpenAI</option>
-                <option value="gemini">Gemini</option>
-                <option value="anthropic">Anthropic</option>
-                <option value="custom">Custom</option>
-              </select>
-              <input type="password" id="customApiKey" class="form-control" placeholder="Enter API Key">
-              <div class="d-flex">
-                <button class="btn btn-secondary mr-2" id="saveApiKey"><i class="fas fa-save"></i> Save </button>
-                <button class="btn btn-secondary" id="clearApiKey"><i class="fas fa-trash"></i> Clear</button>
+              <div id="savedKeysList" class="mb-3">
+                <!-- Saved keys will be displayed here -->
+              </div>
+              <div class="add-key-form">
+                <select id="customProvider" class="form-control mb-2">
+                  <option value="">Select Provider</option>
+                  <option value="openai">OpenAI</option>
+                  <option value="gemini">Gemini</option>
+                  <option value="anthropic">Anthropic</option>
+                  <option value="custom">Custom</option>
+                </select>
+                <input type="password" id="customApiKey" class="form-control mb-2" placeholder="Enter API Key">
+                <button class="btn btn-secondary" id="addApiKey"><i class="fas fa-plus"></i> Add Key</button>
               </div>
             </div>
           </div>

@@ -4,11 +4,15 @@ let selectedModels = [];
 document.addEventListener('DOMContentLoaded', async () => {
   // Fetch available models
   try {
-    const customProvider = localStorage.getItem('customProvider');
-    const customApiKey = localStorage.getItem('customApiKey');
+    const customKeys = JSON.parse(localStorage.getItem('customApiKeys') || '[]');
     let url = '/models';
-    if (customProvider && customApiKey) {
-      url += `?customProvider=${encodeURIComponent(customProvider)}&customApiKey=${encodeURIComponent(customApiKey)}`;
+    if (customKeys.length > 0) {
+      const params = new URLSearchParams();
+      customKeys.forEach((key, index) => {
+        params.append(`customProvider${index}`, key.provider);
+        params.append(`customApiKey${index}`, key.key);
+      });
+      url += '?' + params.toString();
     }
     const response = await fetch(url);
     const data = await response.json();
