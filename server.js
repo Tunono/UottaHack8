@@ -12,6 +12,10 @@ app.use(express.static(path.join(__dirname, 'public')));
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
+// Custom API keys (in memory)
+let customOpenaiApiKey = null;
+let customGeminiApiKey = null;
+
 // Function to calculate text metrics
 function calculateTextMetrics(text) {
   if (!text) return { charCount: 0, wordCount: 0, sentenceCount: 0, lexicalDiversity: 0, avgWordLength: 0 };
@@ -34,7 +38,7 @@ function calculateTextMetrics(text) {
   };
 }
 
-async function getAvailableModels() {
+async function getAvailableModels(customProvider, customApiKey) {
   const models = [];
   if (process.env.OPENAI_API_KEY) {
     try {
@@ -59,6 +63,28 @@ async function getAvailableModels() {
    { provider: 'gemini', id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash'}
     );
   }
+
+  // Add custom models
+  if (customProvider === 'openai' && customApiKey) {
+    try {
+      const customOpenai = new OpenAI({ apiKey: customApiKey });
+      const customModels = await customOpenai.models.list();
+      customModels.data.forEach(model => {
+        if (model.id.includes('gpt')) {
+          models.push({ provider: 'openai-custom', id: model.id, name: model.id });
+        }
+      });
+      customOpenaiApiKey = customApiKey;
+    } catch (error) {
+      console.error('Error fetching custom OpenAI models:', error);
+    }
+  }
+  if (customProvider === 'gemini' && customApiKey) {
+    // For Gemini, add a custom model using a valid model id
+    models.push({ provider: 'gemini-custom', id: 'gemini-1.5-flash', name: 'Gemini Custom' });
+    customGeminiApiKey = customApiKey;
+  }
+
   if (models.length === 0) {
     throw new Error('No API keys configured. Please set OPENAI_API_KEY and/or GEMINI_API_KEY in your .env file.');
   }
@@ -74,18 +100,21 @@ async function getAvailableModels() {
 }
 
 async function callModel(prompt, modelId) {
-  const provider = modelId.includes('gpt') ? 'openai' : 'gemini';
+  const provider = modelId.includes('gpt') ? 'openai' : modelId.includes('gemini') ? 'gemini' : 'unknown';
 
   if (provider === 'openai') {
-    return callGPT(prompt, modelId);
+    const apiKey = modelId.includes('custom') ? customOpenaiApiKey : process.env.OPENAI_API_KEY;
+    return callGPT(prompt, modelId, apiKey);
   } else if (provider === 'gemini') {
-    return callGeminiModel(prompt, modelId);
+    const apiKey = modelId.includes('custom') ? customGeminiApiKey : process.env.GEMINI_API_KEY;
+    return callGeminiModel(prompt, modelId, apiKey);
   }
 }
 
-async function callGPT(prompt,modelId) {
+async function callGPT(prompt,modelId, apiKey = process.env.OPENAI_API_KEY) {
   const start = Date.now();
-  const response = await openai.chat.completions.create({
+  const client = new OpenAI({ apiKey });
+  const response = await client.chat.completions.create({
     model: modelId,
     messages: [{ role: 'user', content: prompt }],
   });
@@ -95,9 +124,10 @@ async function callGPT(prompt,modelId) {
   return { output, time, tokens };
 }
 
-async function callGeminiModel(prompt, modelId) {
+async function callGeminiModel(prompt, modelId, apiKey = process.env.GEMINI_API_KEY) {
   const start = Date.now();
-  const response = await genAI.models.generateContent({
+  const client = new GoogleGenAI({ apiKey });
+  const response = await client.models.generateContent({
     model: modelId,
     contents: prompt,
   });
@@ -110,7 +140,9 @@ async function callGeminiModel(prompt, modelId) {
 
 app.get('/models', async (req, res) => {
   try {
-    const models = await getAvailableModels();
+    const customProvider = req.query.customProvider;
+    const customApiKey = req.query.customApiKey;
+    const models = await getAvailableModels(customProvider, customApiKey);
     res.json({ models });
   } catch (error) {
     res.status(500).json({ error: error.message });

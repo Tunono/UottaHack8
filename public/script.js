@@ -4,7 +4,13 @@ let selectedModels = [];
 document.addEventListener('DOMContentLoaded', async () => {
   // Fetch available models
   try {
-    const response = await fetch('/models');
+    const customProvider = localStorage.getItem('customProvider');
+    const customApiKey = localStorage.getItem('customApiKey');
+    let url = '/models';
+    if (customProvider && customApiKey) {
+      url += `?customProvider=${encodeURIComponent(customProvider)}&customApiKey=${encodeURIComponent(customApiKey)}`;
+    }
+    const response = await fetch(url);
     const data = await response.json();
     allModels = data.models;
 

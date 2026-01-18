@@ -92,6 +92,27 @@
 
           <div class="setting-item">
             <div class="setting-header">
+              <h3><i class="fas fa-key"></i> Custom API Key</h3>
+              <p class="setting-description">Add an API key for additional ML models to compare</p>
+            </div>
+            <div class="setting-control">
+              <select id="customProvider" class="form-control mb-2">
+                <option value="">Select Provider</option>
+                <option value="openai">OpenAI</option>
+                <option value="gemini">Gemini</option>
+                <option value="anthropic">Anthropic</option>
+                <option value="custom">Custom</option>
+              </select>
+              <input type="password" id="customApiKey" class="form-control" placeholder="Enter API Key">
+              <div class="d-flex">
+                <button class="btn btn-secondary mr-2" id="saveApiKey"><i class="fas fa-save"></i> Save </button>
+                <button class="btn btn-secondary" id="clearApiKey"><i class="fas fa-trash"></i> Clear</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="setting-item">
+            <div class="setting-header">
               <h3><i class="fas fa-history"></i> Reset Settings</h3>
               <p class="setting-description">Restore all settings to default values</p>
             </div>

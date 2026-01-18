@@ -29,6 +29,17 @@ function setupEventListeners() {
   if (resetButton) {
     resetButton.addEventListener('click', resetAllSettings);
   }
+
+  // Custom API Key
+  const saveApiKeyButton = document.getElementById('saveApiKey');
+  if (saveApiKeyButton) {
+    saveApiKeyButton.addEventListener('click', saveCustomApiKey);
+  }
+
+  const clearApiKeyButton = document.getElementById('clearApiKey');
+  if (clearApiKeyButton) {
+    clearApiKeyButton.addEventListener('click', clearCustomApiKey);
+  }
 }
 
 function loadSettings() {
@@ -52,6 +63,18 @@ function loadSettings() {
   const themeRadio = document.querySelector(`input[name="theme"][value="${theme}"]`);
   if (themeRadio) {
     themeRadio.checked = true;
+  }
+
+  // Load custom API key
+  const customProvider = localStorage.getItem('customProvider') || '';
+  const customApiKey = localStorage.getItem('customApiKey') || '';
+  const customProviderSelect = document.getElementById('customProvider');
+  const customApiKeyInput = document.getElementById('customApiKey');
+  if (customProviderSelect) {
+    customProviderSelect.value = customProvider;
+  }
+  if (customApiKeyInput) {
+    customApiKeyInput.value = customApiKey;
   }
 }
 
@@ -122,6 +145,8 @@ function resetAllSettings() {
     localStorage.removeItem('darkMode');
     localStorage.removeItem('fontSize');
     localStorage.removeItem('theme');
+    localStorage.removeItem('customProvider');
+    localStorage.removeItem('customApiKey');
 
     // Reset UI
     loadSettings();
@@ -130,6 +155,32 @@ function resetAllSettings() {
     // Reload page to show changes
     location.reload();
   }
+}
+
+function saveCustomApiKey() {
+  const provider = document.getElementById('customProvider').value;
+  const apiKey = document.getElementById('customApiKey').value.trim();
+  
+  if (!provider) {
+    alert('Please select a provider.');
+    return;
+  }
+  if (!apiKey) {
+    alert('Please enter an API key.');
+    return;
+  }
+  
+  localStorage.setItem('customProvider', provider);
+  localStorage.setItem('customApiKey', apiKey);
+  alert('Custom API key saved successfully!');
+}
+
+function clearCustomApiKey() {
+  localStorage.removeItem('customProvider');
+  localStorage.removeItem('customApiKey');
+  document.getElementById('customProvider').value = '';
+  document.getElementById('customApiKey').value = '';
+  alert('Custom API key cleared.');
 }
 
 // Apply settings on every page load
