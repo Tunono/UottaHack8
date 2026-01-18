@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LLM Comparison Tool</title>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <!-- Top Header Bar -->
+  <header class="top-header">
+    <div class="header-content">
+      <a href="home.html" class="logo-link">
+        <div class="logo-section">
+          <i class="fas fa-brain"></i>
+          <span class="app-title">Model Matchup</span>
+        </div>
+      </a>
+      <nav class="header-nav">
+        <a href="home.html" class="nav-link">Home</a>
+        <a href="#" class="nav-link active">Compare</a>
+        <a href="chat.html" class="nav-link">Chat</a>
+        <a href="about.html" class="nav-link">About</a>
+        <a href="settings.html" class="nav-link">Settings</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Top model row (small, modular, under header) -->
+  <div id="topModelRow" class="top-model-row container"></div>
+
+  <div class="container">
+    <div class="header-section">
+      <h1>AI Model Comparison Tool</h1>
+      <p class="subtitle">Select two models and enter your prompt to compare responses</p>
+    </div>
+
+    <div id="results"></div>
+
+    <!-- selected models moved to top bar -->
+
+    <div class="form-section">
+      <div class="model-selection-section">
+        <div class="search-filter-section">
+          <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" id="modelSearchInput" placeholder="Search models by name, generation, etc...">
+          </div>
+          <h3>Select Two Models to Compare</h3>
+          <div class="compare-buttons">
+            <button type="button" class="btn btn-compare" id="compareButton" disabled>Compare AI</button>
+            <button type="button" class="btn btn-compare" id="promptCompareButton" disabled>Prompt Compare</button>
+          </div>
+        </div>
+        <div id="modelsGrid" class="models-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+  <script src="settings.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="script.js"></script>
+  <!-- Prompt Compare Modal -->
+  <div id="promptModal" class="prompt-modal-overlay" aria-hidden="true">
+    <div class="prompt-modal">
+      <div class="prompt-modal-header">
+        <h4>Prompt</h4>
+        <button id="promptClose" class="prompt-close">&times;</button>
+      </div>
+      <div class="prompt-modal-body">
+        <textarea id="promptInput" placeholder="Type your prompt here..." rows="6"></textarea>
+      </div>
+      <div class="prompt-modal-footer">
+        <button id="promptCancel" class="btn btn-secondary">Cancel</button>
+        <button id="promptSubmit" class="btn btn-compare">Run Compare</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
