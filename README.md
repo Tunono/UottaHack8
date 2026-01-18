@@ -32,12 +32,14 @@ Main
 
 
 -Most Stable version of software
+
 -Reflects lastest version
 
 clean-main
 
 
 -Most feature packed verion of software
+
 -Focued on creating and testing features
 
 
